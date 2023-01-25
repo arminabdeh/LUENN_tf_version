@@ -7,7 +7,7 @@ import module as module
 from module import Localization_3D
 from module import Precision_parameters
 from module import Classification
-import matplotlib as mpl
+# import matplotlib as mpl
 dense_id = 3
 directory1 = './post_results/Uncer/LSNR/Dense_'+str(dense_id)+'_LSNR_localization_unc.pkl'
 dataset_1  = pd.read_pickle(directory1)
