@@ -2,3 +2,5 @@ git status
 git add .
 git commit -m "note"
 git push
+git clone "directory"
+git pull, update your files
