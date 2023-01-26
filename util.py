@@ -26,105 +26,32 @@ import decode
 import random
 import torch
 from scipy.signal import peak_widths
-from util import consolidated_Z_range
-simplefilter(action='ignore', category=FutureWarning)
+# -------------------------------------------------------
+def consolidated_Z_range(recalls_dense):
+    Zmax_id = np.argmax(recalls_dense.Recall)
+    Zmax    = recalls_dense.Z_ave.to_list()[Zmax_id]
+    Rmax    = recalls_dense.Recall.to_list()[Zmax_id]
+    res    = peak_widths(np.array(recalls_dense.Recall),[Zmax_id],rel_height=0.5)
+    Z_step = recalls_dense.Z_ave.to_list()[1]- recalls_dense.Z_ave.to_list()[0]
+    Z_min  = recalls_dense.Z_ave.to_list()[0]
+    left_min_recall = recalls_dense.Recall[0:Zmax_id].min()
+    right_min_recall = recalls_dense.Recall[Zmax_id:].min()
+    left_sign = (Rmax/2.) - left_min_recall
+    right_sign = (Rmax/2.) - right_min_recall
+    if left_sign<=0.:
+        zh_min = -700.
+    else:
+        zh_min = ((res[2]*Z_step)-700)[0]
+    if right_sign<=0.:
+        zh_max = 700. 
+    else:
+        zh_max = ((res[3]*Z_step)-700)[0]
+    xplot = [zh_min,zh_max]
+    yplot = [Rmax/2.,Rmax/2.]
+    FWHM = zh_max-zh_min
+    ConsZR = FWHM*Rmax
+    return Zmax,Rmax,FWHM,ConsZR,xplot,yplot
 
-
-class Localization_3D:
-	def __init__(self,psf):
-		self.psf       = psf
-	def sigma(self,x,w):
-		w1 = w[0]
-		w2 = w[1]
-		w3 = w[2]
-		x1 = x[0]
-		x2 = x[1]
-		x3 = x[2]
-		t1 = w1**((x3**2)-(x2**2))
-		t2 = w2**((x1**2)-(x3**2))
-		t3 = w3**((x2**2)-(x1**2))
-		t4 = w1**(x3-x2)
-		t5 = w2**(x1-x3)
-		t6 = w3**(x2-x1)
-		mu = 0.5*(math.log(t1*t2*t3)/math.log(t4*t5*t6))
-		va = np.abs(0.5*(x3-x2)*(x1-x3)*(x2-x1)/math.log(t4*t5*t6))
-		return mu,va
-	def AS_Localization(self,properties):
-		threshold_clean       = properties['threshold_clean'][0]
-		threshold_abs         = properties['threshold_abs'][0]
-		threshold_distance    = properties['threshold_distance'][0]
-		skip_min              = properties['skip_min'][0]
-		skip_max              = properties['skip_max'][0]
-		threshold_freq_sum    = properties['threshold_freq_sum'][0]
-		threshold_freq_max    = properties['threshold_freq_max'][0]
-		radius_lat            = properties['radius_lat'][0]
-		radius_axi            = properties['radius_axi'][0]
-		bias_x                = properties['bias_x'][0]
-		bias_y                = properties['bias_y'][0]
-		bias_z                = properties['bias_z'][0]
-		px_size               = properties['px_size'][0]
-		z_range               = properties['z_range'][0]
-		psfs_cos = self.psf[:,:,0]
-		psfs_sin = self.psf[:,:,1]
-		psfs_norm  = np.sqrt(np.square(psfs_cos)+np.square(psfs_sin))
-		eps = 10e-8
-		psfs_Z    = np.arccos(np.divide(psfs_cos,psfs_norm+eps))/3.14159265359
-		psfs_norm = psfs_norm/10000.
-		psfs_norm_clean = np.where(psfs_norm<=threshold_clean,0,psfs_norm)
-		label, features = scipy.ndimage.label(psfs_norm_clean)
-		local_maximals = peak_local_max(psfs_norm,threshold_abs=threshold_abs,exclude_border=True,min_distance=threshold_distance,labels=label)
-		count_detected = len(local_maximals)
-		candidates = []
-		result_dic = {'probability':[],'X_pr_px':[],'Y_pr_px':[],'Z_pr_px':[],'XY_pr_px':[],'XYZ_pr_px':[],'X_pr_nm':[],'Y_pr_nm':[],'Z_pr_nm':[],
-		'XY_pr_nm':[],'XYZ_pr_nm':[],'Id_i':[],'Id_j':[],'Freq_max':[],'Freq_sum':[],'Sigma_X':[],'Sigma_Y':[],'Sigma_Z':[],'Sigma_I':[]}
-		for i in range(0,count_detected):
-			Id_i = local_maximals[i][0]
-			Id_j = local_maximals[i][1]
-			if (Id_i>skip_min[0] and Id_i<skip_max[0] and Id_j>skip_min[1] and Id_j<skip_max[1]):
-				I_max = psfs_norm[Id_i,Id_j]
-				I_sum = psfs_norm[Id_i-1,Id_j]+psfs_norm[Id_i+1,Id_j]+psfs_norm[Id_i,Id_j]+psfs_norm[Id_i,Id_j-1]+psfs_norm[Id_i,Id_j+1]
-				I_std = np.std(psfs_norm[Id_i-2:Id_i+3,Id_j-2:Id_j+3])	
-				Dist_X = [psfs_norm[Id_i-radius_lat,Id_j],psfs_norm[Id_i,Id_j],psfs_norm[Id_i+radius_lat,Id_j]]
-				Dist_Y = [psfs_norm[Id_i,Id_j-radius_lat],psfs_norm[Id_i,Id_j],psfs_norm[Id_i,Id_j+radius_lat]]
-				x_correction,s_x = self.sigma([-1*radius_lat,0.,radius_lat],Dist_X)
-				y_correction,s_y = self.sigma([-1*radius_lat,0.,radius_lat],Dist_Y)
-				X_px = ((y_correction+Id_j)/4.)+(bias_x/px_size[0])
-				Y_px = ((x_correction+Id_i)/4.)+(bias_y/px_size[1])
-				Z_px = (np.average(psfs_Z[Id_i-radius_axi:Id_i+radius_axi+1,Id_j-radius_axi:Id_j+radius_axi+1],weights=psfs_norm[Id_i-radius_axi:Id_i+radius_axi+1,Id_j-radius_axi:Id_j+radius_axi+1]))*64
-				Z_px +=64*bias_z/z_range
-				X_nm = X_px*px_size[0]
-				Y_nm = Y_px*px_size[1]
-				Z_nm = (np.average(psfs_Z[Id_i-radius_axi:Id_i+radius_axi+1,Id_j-radius_axi:Id_j+radius_axi+1],weights=psfs_norm[Id_i-radius_axi:Id_i+radius_axi+1,Id_j-radius_axi:Id_j+radius_axi+1])*z_range)-(z_range/2)
-				Z_nm +=bias_z
-				res = result_dic.copy()
-				res['probability'] =  I_max
-				res['X_pr_px']     =  X_px
-				res['Y_pr_px']     =  Y_px
-				res['Z_pr_px']     =  Z_px
-				res['XY_pr_px']    =  [X_px,Y_px]
-				res['XYZ_pr_px']   =  [X_px,Y_px,Z_px]
-				res['X_pr_nm']     =  X_nm
-				res['Y_pr_nm']     =  Y_nm
-				res['Z_pr_nm']     =  Z_nm
-				res['XY_pr_nm']    =  [X_nm,Y_nm]
-				res['XYZ_pr_nm']   =  [X_nm,Y_nm,Z_nm]
-				res['Id_i']       = Id_i
-				res['Id_j']       = Id_j
-				res['Freq_max']   =  I_max
-				res['Freq_sum']   =  I_sum
-				res['Sigma_X'] =  s_x*(px_size[0]/4.)
-				res['Sigma_Y'] =  s_y*(px_size[1]/4.)
-				res['Sigma_Z'] =  np.std(psfs_Z[Id_i-2:Id_i+3,Id_j-2:Id_j+3])
-				res['Sigma_I'] =  I_std
-				candidates.append(res)
-		data_candids = pd.DataFrame(candidates)
-		if len(data_candids)>0:
-			data_candids_filter = data_candids[(data_candids['Freq_sum']>threshold_freq_sum)|(data_candids['Freq_max']>threshold_freq_max)]
-		if len(data_candids)==0:
-			candidates.append(result_dic)
-			data_candids_filter = data_candids
-		return data_candids_filter
-	
 
 
 def splitwise_prediction(model,chunk_size,frames,saved_directory):
