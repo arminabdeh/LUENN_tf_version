@@ -1,3 +1,2 @@
 # LUENN
-
-SMLM
+Single-Molecule Localization Microscopy (SMLM) has expanded our ability to visualize sub-cellular structures but is limited in its temporal resolution. Increasing emitter density will improve temporal resolution, but current analysis algorithms struggle as emitter images significantly overlap. Here we present a deep-convolutional neural network called LUENN which utilizes a unique architecture that rejects the isolated emitter assumption; it can smoothly accommodate emitters that range from completely isolated to co-located. This architecture, alongside an accurate estimator of location uncertainty, extends the range of usable emitter densities by a factor of 6 to over $\mathrm{30 ~ emitters/\mu m^{2}} $ with limited penalty to localization precision. Along with an accurate estimator of localization uncertainty, the algorithm increases usability for laboratories by decreasing imaging times and relaxing requirements for successful experiments.
