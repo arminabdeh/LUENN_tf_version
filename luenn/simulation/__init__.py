@@ -1,1 +1,2 @@
-import luenn.simulation.train
+import luenn.simulation.sampling
+import luenn.simulation.simulate
