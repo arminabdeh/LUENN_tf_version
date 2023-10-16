@@ -11,11 +11,11 @@ https://user-images.githubusercontent.com/61014265/219693582-acd024b2-b547-496d-
 The software was tested on a Linux system with Ubuntu version 7.0, and a Windows system with Windows 10 Home.
 Training and evaluation were run on a standard workstation equipped with 32 GB of memory, an Intel(R) Core(TM) i7 − 8700, 3.20 GHz CPU, and a NVidia GeForce Titan Xp GPU with 12 GB of video memory.
  
-""" %# Installation
-%Download this repository as a zip file (or clone it using git).
-Go to the downloaded directory and unzip it.
-%The conda environment for this project is given in environment_<os>.yml where <os> should be substituted with your operating system. For example, to replicate the #environment on a linux system use the command: conda env create -f environment_linux.yml from within the downloaded directory. This should take a couple of minutes.
-%After activation of the environment using: conda activate deep-storm3d, you're set to go!"""
+# Installation
+1. Download this repository as a zip file (or clone it using git). <br>
+2. Go to the downloaded directory and unzip it. >br>
+3. The conda environment for this project is given in environment_<os>.yml where <os> should be substituted with your operating system. For example, to replicate the environment on a linux system use the command: conda env create -f environment_linux.yml from within the downloaded directory. This should take a couple of minutes. <br>
+4. After activation of the environment using: conda activate LUENN, you're set to go!
 
 ## Contributers:
 
